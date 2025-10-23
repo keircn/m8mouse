@@ -192,6 +192,10 @@ void log_device_mem(){
     log_trace("log_device_mem: Printing device memory, size: %i", memsize);
     
     char *buffer = malloc(memsize * 8);
+    if (!buffer) {
+        log_error("log_device_mem: Failed to allocate memory for buffer");
+        return;
+    }
     buffer[0] = 0;
     
     char *pointer = buffer;
