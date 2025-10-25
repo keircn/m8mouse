@@ -2,3 +2,4 @@ build
 *.md
 !README.md
 .cache
+*.o
