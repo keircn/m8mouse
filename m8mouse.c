@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+#include <string.h>
 #include "m8mouse.h"
 
 static mode _dpi_modes[] = {

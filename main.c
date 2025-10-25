@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 //#include <hidapi/hidapi.h>
 //#include <unistd.h>
 
@@ -191,8 +192,6 @@ int process_args(int argc, char *argv[]){
 
 int main(int argc, char *argv[]){
     
-    FILE *logfile = NULL;
-    
     int run_action = process_args(argc, argv);
     
     if(run_action == RUN_ACTION_LIST){
@@ -213,10 +212,11 @@ int main(int argc, char *argv[]){
         strftime(timestamp_buff, sizeof(timestamp_buff), "%Y%m%d-%H%M%S", tm_now_info);
         char filename_buff[64];
         sprintf(filename_buff, "m8debug-%s.log", timestamp_buff);
-        logfile = fopen(filename_buff, "a");
-        if(logfile){
-            fprintf(logfile, "\n=================================\n");
-            log_add_fp(logfile, LOG_TRACE);
+        global_logfile = fopen(filename_buff, "a");
+        if(global_logfile){
+            fprintf(global_logfile, "\n=================================\n");
+            log_add_fp(global_logfile, LOG_TRACE);
+            atexit(cleanup_logging);
         } else {
             log_warn("Failed to open debug log file %s", filename_buff);
         }
@@ -229,10 +229,7 @@ int main(int argc, char *argv[]){
         printf("Error initialising device. May not be connected or no user permission\n");
         printf("      - check that device %04x:%04x is connected to usb (lsusb)\n", USB_M8_VID, USB_M8_PID);
         printf("      - run with sudo or add uaccess to udev rules (see README.md)\n");
-        if(logfile) {
-            log_remove_fp(logfile);
-            fclose(logfile);
-        }
+        cleanup_logging();
         return 1;
     }
     
@@ -257,9 +254,6 @@ int main(int argc, char *argv[]){
     
     device_shutdown();
     
-    if(logfile) {
-        log_remove_fp(logfile);
-        fclose(logfile);
-    }
+    cleanup_logging();
     return 0;
 }
