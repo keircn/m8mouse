@@ -131,6 +131,23 @@ int log_add_fp(FILE *fp, int level) {
 }
 
 
+void log_remove_callback(log_LogFn fn, void *udata) {
+  for (int i = 0; i < MAX_CALLBACKS; i++) {
+    if (L.callbacks[i].fn == fn && L.callbacks[i].udata == udata) {
+      L.callbacks[i].fn = NULL;
+      L.callbacks[i].udata = NULL;
+      L.callbacks[i].level = 0;
+      break;
+    }
+  }
+}
+
+
+void log_remove_fp(FILE *fp) {
+  log_remove_callback(file_callback, fp);
+}
+
+
 static void init_event(log_Event *ev, void *udata) {
   if (!ev->time) {
     time_t t = time(NULL);

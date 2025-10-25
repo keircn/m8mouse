@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
-//#include <stdlib.h>
+#include <stdlib.h>
 //#include <hidapi/hidapi.h>
 //#include <unistd.h>
 
@@ -24,6 +24,16 @@ int cli_debug_level = LOG_FATAL;
 int cli_requested_dpi = -1;
 int cli_requested_led = -1;
 int cli_requested_speed = -1;
+
+static FILE *global_logfile = NULL;
+
+void cleanup_logging() {
+    if(global_logfile) {
+        log_remove_fp(global_logfile);
+        fclose(global_logfile);
+        global_logfile = NULL;
+    }
+}
 
 
 
@@ -181,7 +191,7 @@ int process_args(int argc, char *argv[]){
 
 int main(int argc, char *argv[]){
     
-    FILE *logfile;
+    FILE *logfile = NULL;
     
     int run_action = process_args(argc, argv);
     
@@ -204,8 +214,12 @@ int main(int argc, char *argv[]){
         char filename_buff[64];
         sprintf(filename_buff, "m8debug-%s.log", timestamp_buff);
         logfile = fopen(filename_buff, "a");
-        fprintf(logfile, "\n=================================\n");
-        log_add_fp(logfile, LOG_TRACE);
+        if(logfile){
+            fprintf(logfile, "\n=================================\n");
+            log_add_fp(logfile, LOG_TRACE);
+        } else {
+            log_warn("Failed to open debug log file %s", filename_buff);
+        }
         //log_set_quiet(1);
         log_set_level(LOG_INFO);
     }
@@ -215,6 +229,10 @@ int main(int argc, char *argv[]){
         printf("Error initialising device. May not be connected or no user permission\n");
         printf("      - check that device %04x:%04x is connected to usb (lsusb)\n", USB_M8_VID, USB_M8_PID);
         printf("      - run with sudo or add uaccess to udev rules (see README.md)\n");
+        if(logfile) {
+            log_remove_fp(logfile);
+            fclose(logfile);
+        }
         return 1;
     }
     
@@ -239,7 +257,9 @@ int main(int argc, char *argv[]){
     
     device_shutdown();
     
-    if(cli_debug_level == LOG_TRACE)
+    if(logfile) {
+        log_remove_fp(logfile);
         fclose(logfile);
+    }
     return 0;
 }

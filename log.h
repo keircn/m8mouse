@@ -10,7 +10,6 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <string.h>
 #include <stdbool.h>
 #include <time.h>
 
@@ -47,6 +46,8 @@ void log_set_quiet(bool enable);
 int log_get_level();
 int log_add_callback(log_LogFn fn, void *udata, int level);
 int log_add_fp(FILE *fp, int level);
+void log_remove_callback(log_LogFn fn, void *udata);
+void log_remove_fp(FILE *fp);
 
 void log_log(int level, const char *file, int line, const char *fmt, ...);
 
