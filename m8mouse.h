@@ -58,9 +58,10 @@
 #define M8_LED_BRIGHT_ADDR      0x2F
 #define M8_LED_BRIGHT_MASK      0xFF
 
-// Polling rate address (suspected based on typical mouse memory maps)
-#define M8_POLL_RATE_ADDR       0x04
-#define M8_POLL_RATE_MASK       0x0F
+// Polling rate - byte 0x00, upper 2 bits
+// 0x00 = 1000Hz, 0x40 = 500Hz, 0x80 = 250Hz, 0xC0 = 125Hz
+#define M8_POLL_RATE_ADDR       0x00
+#define M8_POLL_RATE_MASK       0xC0
 
 // Button mapping base address (suspected)
 #define M8_BUTTON_MAP_ADDR      0x10

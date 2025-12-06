@@ -54,10 +54,10 @@ static mode _led_speeds[] = {
 };
 
 static mode _poll_rates[] = {
-    {"125Hz",           0x03},
-    {"250Hz",           0x02},
-    {"500Hz",           0x01},
     {"1000Hz",          0x00},
+    {"500Hz",           0x40},
+    {"250Hz",           0x80},
+    {"125Hz",           0xC0},
     {0}
 };
 
@@ -262,6 +262,23 @@ static int devmem_get_mode_index(int address, uint8_t mask, mode *modes){
     mode *curr = modes;
     for(int i = 0; curr->label; i++, curr++){
         if((curr->value) == ledvalue){
+            return i;
+        }
+    }
+    
+    return -ENO_GENERAL;
+}
+
+static int devmem_get_masked_index(int address, uint8_t mask, mode *modes){
+    
+    if(m8device.memsize <= address)
+        return -ENO_GENERAL;
+    
+    uint8_t value = m8device.memdata[address] & mask;
+    
+    mode *curr = modes;
+    for(int i = 0; curr->label; i++, curr++){
+        if((curr->value & mask) == value){
             return i;
         }
     }
@@ -719,12 +736,20 @@ int device_set_poll_rate(int rate){
         return -ENO_GENERAL;
     }
     
-    if(devmem_set_mode(M8_POLL_RATE_ADDR, M8_POLL_RATE_MASK, _poll_rates, rate)){
-        log_error("Failed to set poll rate");
+    int address = M8_POLL_RATE_ADDR;
+    if(m8device.memsize <= address){
+        log_error("Memory address out of bounds");
         return -ENO_GENERAL;
     }
     
-    log_debug("device_set_poll_rate: set to %s", _poll_rates[rate].label);
+    uint8_t value = _poll_rates[rate].value;
+    uint8_t currvalue = m8device.memdata[address];
+    uint8_t newvalue = (currvalue & ~M8_POLL_RATE_MASK) | (value & M8_POLL_RATE_MASK);
+    
+    log_debug("device_set_poll_rate: address 0x%02x changing from 0x%02x to 0x%02x (%s)", 
+              address, currvalue, newvalue, _poll_rates[rate].label);
+    
+    m8device.memdata[address] = newvalue;
     return ENO_SUCCESS;
 }
 
@@ -808,7 +833,7 @@ int device_update_state(){
     m8device.active_dpi = devmem_get_mode_index(M8_DPI_ADDR, M8_DPI_MODE_MASK, _dpi_modes);
     m8device.active_led = devmem_get_mode_index(M8_LED_ADDR, M8_LED_MODE_MASK, _led_modes);
     m8device.active_speed = devmem_get_mode_index(M8_LED_ADDR, M8_LED_SPEED_MASK, _led_speeds);
-    m8device.active_poll_rate = devmem_get_mode_index(M8_POLL_RATE_ADDR, M8_POLL_RATE_MASK, _poll_rates);
+    m8device.active_poll_rate = devmem_get_masked_index(M8_POLL_RATE_ADDR, M8_POLL_RATE_MASK, _poll_rates);
     m8device.active_brightness = devmem_get_dpires_index(M8_LED_BRIGHT_ADDR, _brightness_modes);
     
     for(int i=0; i<M8_DPI_RES_COUNT; i++){

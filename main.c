@@ -151,11 +151,11 @@ void print_modes(){
 
 void print_usage(){
     printf("Usage: \n"
-    "    m8mouser \n"
-    "    m8mouser -l \n"
-    "    m8mouser [-dpi D | -led L | -speed S | -poll P | -dpires L:R | -bright B]\n"
-    "    m8mouser -save <file>    # save current config to file\n"
-    "    m8mouser -load <file>    # load config from file and apply\n"
+    "    m8mouse \n"
+    "    m8mouse -l \n"
+    "    m8mouse [-dpi D | -led L | -speed S | -poll P | -dpires L:R | -bright B]\n"
+    "    m8mouse -save <file>    # save current config to file\n"
+    "    m8mouse -load <file>    # load config from file and apply\n"
     "    \n"
     "    Options: \n"
     "       -l        list known modes and values\n"
