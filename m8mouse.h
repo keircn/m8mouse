@@ -55,6 +55,9 @@
 #define M8_MODE_LED_HALF_ON     0x47
 #define M8_MODE_LED_HALF_OFF    0x7F
 
+#define M8_LED_BRIGHT_ADDR      0x2F
+#define M8_LED_BRIGHT_MASK      0xFF
+
 // Polling rate address (suspected based on typical mouse memory maps)
 #define M8_POLL_RATE_ADDR       0x04
 #define M8_POLL_RATE_MASK       0x0F
@@ -68,7 +71,8 @@ typedef enum {
     M8_DEVICE_MODE_DPI_RES,
     M8_DEVICE_MODE_LED,
     M8_DEVICE_MODE_SPEED,
-    M8_DEVICE_MODE_POLL_RATE
+    M8_DEVICE_MODE_POLL_RATE,
+    M8_DEVICE_MODE_BRIGHTNESS
 } M8_DEVICE_MODES;
 
 typedef unsigned char packet_buffer[M8_PKT_SIZE];
@@ -90,12 +94,14 @@ struct devicedata {
     int             active_led;
     int             active_speed;
     int             active_poll_rate;
+    int             active_brightness;
     int             dpires_values[M8_DPI_RES_COUNT];
     mode           *modes_dpi;
     mode           *modes_dpires;
     mode           *modes_led;
     mode           *modes_speed;
     mode           *modes_poll_rate;
+    mode           *modes_brightness;
 };
 
 
@@ -109,6 +115,7 @@ int                 device_update_state();
 int                 device_set_modes(int dpi, int led, int speed);
 int                 device_set_dpires(int level, int resolution);
 int                 device_set_poll_rate(int rate);
+int                 device_set_brightness(int brightness);
 mode               *device_get_active_mode(M8_DEVICE_MODES which_mode);
 mode               *device_get_mode_value(M8_DEVICE_MODES which_mode, int index);
 mode               *device_get_all_modes(M8_DEVICE_MODES which_mode);

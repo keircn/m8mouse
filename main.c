@@ -31,6 +31,7 @@ int cli_requested_dpires_value = -1;
 int cli_dump_mem = 0;
 char *cli_save_profile = NULL;
 char *cli_load_profile = NULL;
+int cli_requested_brightness = -1;
 
 static FILE *global_logfile = NULL;
 
@@ -88,6 +89,12 @@ void print_device_state(){
         printf("  %-15s: %s\n", "Poll Rate", poll_mode->label);
     else
         printf("  Poll Rate: unknown (may not be supported)\n");
+
+    mode *bright_mode = device_get_active_mode(M8_DEVICE_MODE_BRIGHTNESS);
+    if(bright_mode)
+        printf("  %-15s: %s\n", "LED Brightness", bright_mode->label);
+    else
+        printf("  LED Brightness: unknown\n");
 }
 
 void print_single_mode(char *label, mode* curr){
@@ -134,6 +141,9 @@ void print_modes(){
     curr = device_get_all_modes(M8_DEVICE_MODE_POLL_RATE);
     print_single_mode("Poll rates", curr);
     
+    curr = device_get_all_modes(M8_DEVICE_MODE_BRIGHTNESS);
+    print_single_mode("Brightness", curr);
+    
 }
 
 
@@ -141,7 +151,7 @@ void print_usage(){
     printf("Usage: \n"
     "    m8mouser \n"
     "    m8mouser -l \n"
-    "    m8mouser [-dpi D | -led L | -speed S | -poll P | -dpires L:R]\n"
+    "    m8mouser [-dpi D | -led L | -speed S | -poll P | -dpires L:R | -bright B]\n"
     "    m8mouser -save <file>    # save current config to file\n"
     "    m8mouser -load <file>    # load config from file and apply\n"
     "    \n"
@@ -151,6 +161,7 @@ void print_usage(){
     "       -dpires   set DPI resolution for level L to resolution R (e.g. -dpires 1:8)\n"
     "       -led      set LED mode to this index (from known modes) \n"
     "       -speed    set LED speed to this index (from known modes) \n"
+    "       -bright   set LED brightness (1=Full, 2=Half)\n"
     "       -poll     set polling rate (1=125Hz, 2=250Hz, 3=500Hz, 4=1000Hz)\n"
     "       -save     save current device config to a profile file\n"
     "       -load     load a profile file and apply to device\n"
@@ -220,6 +231,11 @@ int process_args(int argc, char *argv[]){
                 cli_requested_poll_rate = atoi(argument) - 1;
             run_action = RUN_ACTION_SET;
             arg_index++;
+        }else if(!strcmp(option, "-bright")){
+            if(strlen(argument) > 0)
+                cli_requested_brightness = atoi(argument) - 1;
+            run_action = RUN_ACTION_SET;
+            arg_index++;
         }else if(!strcmp(option, "-save")){
             if(strlen(argument) > 0)
                 cli_save_profile = argument;
@@ -237,7 +253,8 @@ int process_args(int argc, char *argv[]){
     
     if(run_action == RUN_ACTION_SET && 
         (cli_requested_dpi == -1 && cli_requested_led == -1 && cli_requested_speed == -1 &&
-         cli_requested_poll_rate == -1 && cli_requested_dpires_level == -1 && cli_load_profile == NULL))
+         cli_requested_poll_rate == -1 && cli_requested_dpires_level == -1 && 
+         cli_requested_brightness == -1 && cli_load_profile == NULL))
         run_action = RUN_ACTION_UNKNOWN;
     
     return run_action;
@@ -326,6 +343,10 @@ int main(int argc, char *argv[]){
         
         if(cli_requested_poll_rate >= 0){
             set_result |= device_set_poll_rate(cli_requested_poll_rate);
+        }
+        
+        if(cli_requested_brightness >= 0){
+            set_result |= device_set_brightness(cli_requested_brightness);
         }
         
         if(!set_result){

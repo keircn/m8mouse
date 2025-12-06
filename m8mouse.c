@@ -61,17 +61,25 @@ static mode _poll_rates[] = {
     {0}
 };
 
+static mode _brightness_modes[] = {
+    {"Full",            M8_MODE_LED_HALF_OFF},  // 0x7F = full brightness
+    {"Half",            M8_MODE_LED_HALF_ON},   // 0x47 = half brightness
+    {0}
+};
+
 
 static struct devicedata m8device = {
     .active_dpi = -1,
     .active_led = -1,
     .active_speed = -1,
     .active_poll_rate = -1,
+    .active_brightness = -1,
     .modes_dpi = _dpi_modes,
     .modes_led = _led_modes,
     .modes_speed = _led_speeds,
     .modes_dpires = _dpires_modes,
     .modes_poll_rate = _poll_rates,
+    .modes_brightness = _brightness_modes,
 };
 
 
@@ -720,6 +728,34 @@ int device_set_poll_rate(int rate){
     return ENO_SUCCESS;
 }
 
+int device_set_brightness(int brightness){
+    if(brightness < 0){
+        return ENO_SUCCESS;
+    }
+    
+    mode *curr = _brightness_modes;
+    int count = 0;
+    while(curr->label){ count++; curr++; }
+    
+    if(brightness >= count){
+        log_error("Invalid brightness index: %d (must be 0-%d)", brightness, count-1);
+        return -ENO_GENERAL;
+    }
+    
+    int address = M8_LED_BRIGHT_ADDR;
+    if(m8device.memsize <= address){
+        log_error("Memory address out of bounds");
+        return -ENO_GENERAL;
+    }
+    
+    uint8_t value = _brightness_modes[brightness].value;
+    log_debug("device_set_brightness: setting to %s (value 0x%02x)", 
+              _brightness_modes[brightness].label, value);
+    
+    m8device.memdata[address] = value;
+    return ENO_SUCCESS;
+}
+
 void device_dump_mem(){
     log_device_mem();
 }
@@ -735,6 +771,8 @@ mode *device_get_active_mode(M8_DEVICE_MODES which_mode){
         return &m8device.modes_speed[m8device.active_speed];
     }else if(which_mode == M8_DEVICE_MODE_POLL_RATE && (m8device.active_poll_rate > -1)){
         return &m8device.modes_poll_rate[m8device.active_poll_rate];
+    }else if(which_mode == M8_DEVICE_MODE_BRIGHTNESS && (m8device.active_brightness > -1)){
+        return &m8device.modes_brightness[m8device.active_brightness];
     }
     return NULL;
 }
@@ -758,6 +796,8 @@ mode *device_get_all_modes(M8_DEVICE_MODES which_mode){
         return m8device.modes_speed;
     }else if(which_mode == M8_DEVICE_MODE_POLL_RATE){
         return m8device.modes_poll_rate;
+    }else if(which_mode == M8_DEVICE_MODE_BRIGHTNESS){
+        return m8device.modes_brightness;
     }
     return NULL;
 }
@@ -769,13 +809,14 @@ int device_update_state(){
     m8device.active_led = devmem_get_mode_index(M8_LED_ADDR, M8_LED_MODE_MASK, _led_modes);
     m8device.active_speed = devmem_get_mode_index(M8_LED_ADDR, M8_LED_SPEED_MASK, _led_speeds);
     m8device.active_poll_rate = devmem_get_mode_index(M8_POLL_RATE_ADDR, M8_POLL_RATE_MASK, _poll_rates);
+    m8device.active_brightness = devmem_get_dpires_index(M8_LED_BRIGHT_ADDR, _brightness_modes);
     
     for(int i=0; i<M8_DPI_RES_COUNT; i++){
         m8device.dpires_values[i] = devmem_get_dpires_index(M8_DPI_RES_ADDR + i, _dpires_modes);
     }
     
-    log_trace("device_update_state: active modes are dpi %i, led %i, speed %i, poll_rate %i",
-              m8device.active_dpi, m8device.active_led, m8device.active_speed, m8device.active_poll_rate);
+    log_trace("device_update_state: active modes are dpi %i, led %i, speed %i, poll_rate %i, brightness %i",
+              m8device.active_dpi, m8device.active_led, m8device.active_speed, m8device.active_poll_rate, m8device.active_brightness);
 
     //check that we understood those states, otherwise it's not a supported device
     if(m8device.active_dpi < 0 || m8device.active_led < 0 || m8device.active_speed < 0)
