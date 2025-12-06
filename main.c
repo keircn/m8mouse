@@ -164,7 +164,7 @@ void print_usage(){
     "       -led      set LED mode to this index (from known modes) \n"
     "       -speed    set LED speed to this index (from known modes) \n"
     "       -bright   set LED brightness (1=Full, 2=Half)\n"
-    "       -poll     set polling rate (1=125Hz, 2=250Hz, 3=500Hz, 4=1000Hz)\n"
+    "       -poll     set polling rate (1=1000Hz, 2=500Hz, 3=250Hz, 4=125Hz)\n"
     "       -save     save current device config to a profile file\n"
     "       -load     load a profile file and apply to device\n"
     "       -raw      set raw memory byte at ADDR:VALUE (hex, e.g. -raw 30:05)\n"
