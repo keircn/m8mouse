@@ -89,11 +89,13 @@ struct devicedata {
     int             active_dpi;
     int             active_led;
     int             active_speed;
+    int             active_poll_rate;
     int             dpires_values[M8_DPI_RES_COUNT];
     mode           *modes_dpi;
     mode           *modes_dpires;
     mode           *modes_led;
     mode           *modes_speed;
+    mode           *modes_poll_rate;
 };
 
 

@@ -25,6 +25,10 @@ int cli_debug_level = LOG_FATAL;
 int cli_requested_dpi = -1;
 int cli_requested_led = -1;
 int cli_requested_speed = -1;
+int cli_requested_poll_rate = -1;
+int cli_requested_dpires_level = -1;
+int cli_requested_dpires_value = -1;
+int cli_dump_mem = 0;
 
 static FILE *global_logfile = NULL;
 
@@ -77,6 +81,11 @@ void print_device_state(){
     else
         printf("  LED Speed is unknown\n");
 
+    mode *poll_mode = device_get_active_mode(M8_DEVICE_MODE_POLL_RATE);
+    if(poll_mode)
+        printf("  %-15s: %s\n", "Poll Rate", poll_mode->label);
+    else
+        printf("  Poll Rate: unknown (may not be supported)\n");
 }
 
 void print_single_mode(char *label, mode* curr){
@@ -120,6 +129,9 @@ void print_modes(){
     curr = device_get_all_modes(M8_DEVICE_MODE_SPEED);
     print_single_mode("LED speeds", curr);
     
+    curr = device_get_all_modes(M8_DEVICE_MODE_POLL_RATE);
+    print_single_mode("Poll rates", curr);
+    
 }
 
 
@@ -127,15 +139,18 @@ void print_usage(){
     printf("Usage: \n"
     "    m8mouser \n"
     "    m8mouser -l \n"
-    "    m8mouser [-dpi D | -led L | -speed S]\n"
+    "    m8mouser [-dpi D | -led L | -speed S | -poll P | -dpires L:R]\n"
     "    \n"
     "    Options: \n"
-    "       -l     list known modes and values\n"
-    "       -dpi   set DPI to this index (from known modes) \n"
-    "       -led   set LED mode to this index (from known modes) \n"
-    "       -speed set LED speed to this index (from known modes) \n"
-    "       -g     print debug messages\n"
-    "       -h     help message (this one)\n"
+    "       -l        list known modes and values\n"
+    "       -dpi      set DPI to this index (from known modes) \n"
+    "       -dpires   set DPI resolution for level L to resolution R (e.g. -dpires 1:8)\n"
+    "       -led      set LED mode to this index (from known modes) \n"
+    "       -speed    set LED speed to this index (from known modes) \n"
+    "       -poll     set polling rate (1=125Hz, 2=250Hz, 3=500Hz, 4=1000Hz)\n"
+    "       -dump     dump device memory (for debugging)\n"
+    "       -g        print debug messages\n"
+    "       -h        help message (this one)\n"
     "\n");
 }
 
@@ -162,9 +177,26 @@ int process_args(int argc, char *argv[]){
             cli_debug_level = LOG_TRACE;
         }else if(!strcmp(option, "-l")){
             return RUN_ACTION_LIST;
+        }else if(!strcmp(option, "-dump")){
+            cli_dump_mem = 1;
         }else if(!strcmp(option, "-dpi")){
             if(strlen(argument) > 0)
                 cli_requested_dpi = atoi(argument) - 1;
+            run_action = RUN_ACTION_SET;
+            arg_index++;
+        }else if(!strcmp(option, "-dpires")){
+            if(strlen(argument) > 0){
+                char *colon = strchr(argument, ':');
+                if(colon){
+                    *colon = '\0';
+                    cli_requested_dpires_level = atoi(argument) - 1;
+                    cli_requested_dpires_value = atoi(colon + 1) - 1;
+                    *colon = ':';
+                }else{
+                    printf("Error: -dpires requires L:R format (e.g. -dpires 1:8)\n");
+                    return RUN_ACTION_UNKNOWN;
+                }
+            }
             run_action = RUN_ACTION_SET;
             arg_index++;
         }else if(!strcmp(option, "-led")){
@@ -177,6 +209,11 @@ int process_args(int argc, char *argv[]){
                 cli_requested_speed = atoi(argument) - 1;
             run_action = RUN_ACTION_SET;
             arg_index++;
+        }else if(!strcmp(option, "-poll")){
+            if(strlen(argument) > 0)
+                cli_requested_poll_rate = atoi(argument) - 1;
+            run_action = RUN_ACTION_SET;
+            arg_index++;
         }else{
             return RUN_ACTION_UNKNOWN;
         }
@@ -184,7 +221,8 @@ int process_args(int argc, char *argv[]){
     }
     
     if(run_action == RUN_ACTION_SET && 
-        (cli_requested_dpi == -1 && cli_requested_led == -1 && cli_requested_speed == -1))
+        (cli_requested_dpi == -1 && cli_requested_led == -1 && cli_requested_speed == -1 &&
+         cli_requested_poll_rate == -1 && cli_requested_dpires_level == -1))
         run_action = RUN_ACTION_UNKNOWN;
     
     return run_action;
@@ -238,11 +276,24 @@ int main(int argc, char *argv[]){
     //print_device_mem();
     print_device_state();
 
+    if(cli_dump_mem){
+        puts("\nDevice memory dump:");
+        device_dump_mem();
+    }
+
     if(run_action == RUN_ACTION_SET){
-        if(!device_set_modes(cli_requested_dpi, cli_requested_led, cli_requested_speed)){
-            //device_update_state();
-            //print_device_state();
-            
+        int set_result = 0;
+        set_result |= device_set_modes(cli_requested_dpi, cli_requested_led, cli_requested_speed);
+
+        if(cli_requested_dpires_level >= 0 && cli_requested_dpires_value >= 0){
+            set_result |= device_set_dpires(cli_requested_dpires_level, cli_requested_dpires_value);
+        }
+        
+        if(cli_requested_poll_rate >= 0){
+            set_result |= device_set_poll_rate(cli_requested_poll_rate);
+        }
+        
+        if(!set_result){
             puts("Updating device modes");
             device_update();
             //verify by querying again
