@@ -126,6 +126,8 @@ void                device_dump_mem();
 int                 device_save_profile(const char *filename);
 int                 device_load_profile(const char *filename);
 
+int                 device_set_raw(int address, uint8_t value);
+
 
 
 

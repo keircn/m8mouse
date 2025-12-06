@@ -898,3 +898,18 @@ int device_load_profile(const char *filename){
     log_info("device_load_profile: loaded %d bytes from %s", size, filename);
     return ENO_SUCCESS;
 }
+
+int device_set_raw(int address, uint8_t value){
+    if(address < 0 || address >= m8device.memsize){
+        log_error("device_set_raw: address 0x%02x out of bounds (max 0x%02x)", 
+                  address, m8device.memsize - 1);
+        return -ENO_GENERAL;
+    }
+    
+    uint8_t old_value = m8device.memdata[address];
+    m8device.memdata[address] = value;
+    
+    log_info("device_set_raw: address 0x%02x changed from 0x%02x to 0x%02x", 
+             address, old_value, value);
+    return ENO_SUCCESS;
+}

@@ -32,6 +32,8 @@ int cli_dump_mem = 0;
 char *cli_save_profile = NULL;
 char *cli_load_profile = NULL;
 int cli_requested_brightness = -1;
+int cli_raw_addr = -1;
+int cli_raw_value = -1;
 
 static FILE *global_logfile = NULL;
 
@@ -165,6 +167,7 @@ void print_usage(){
     "       -poll     set polling rate (1=125Hz, 2=250Hz, 3=500Hz, 4=1000Hz)\n"
     "       -save     save current device config to a profile file\n"
     "       -load     load a profile file and apply to device\n"
+    "       -raw      set raw memory byte at ADDR:VALUE (hex, e.g. -raw 30:05)\n"
     "       -dump     dump device memory (for debugging)\n"
     "       -g        print debug messages\n"
     "       -h        help message (this one)\n"
@@ -245,6 +248,21 @@ int process_args(int argc, char *argv[]){
                 cli_load_profile = argument;
             run_action = RUN_ACTION_SET;
             arg_index++;
+        }else if(!strcmp(option, "-raw")){
+            if(strlen(argument) > 0){
+                char *colon = strchr(argument, ':');
+                if(colon){
+                    *colon = '\0';
+                    cli_raw_addr = (int)strtol(argument, NULL, 16);
+                    cli_raw_value = (int)strtol(colon + 1, NULL, 16);
+                    *colon = ':';
+                }else{
+                    printf("Error: -raw requires ADDR:VALUE format in hex (e.g. -raw 30:05)\n");
+                    return RUN_ACTION_UNKNOWN;
+                }
+            }
+            run_action = RUN_ACTION_SET;
+            arg_index++;
         }else{
             return RUN_ACTION_UNKNOWN;
         }
@@ -254,7 +272,7 @@ int process_args(int argc, char *argv[]){
     if(run_action == RUN_ACTION_SET && 
         (cli_requested_dpi == -1 && cli_requested_led == -1 && cli_requested_speed == -1 &&
          cli_requested_poll_rate == -1 && cli_requested_dpires_level == -1 && 
-         cli_requested_brightness == -1 && cli_load_profile == NULL))
+         cli_requested_brightness == -1 && cli_raw_addr == -1 && cli_load_profile == NULL))
         run_action = RUN_ACTION_UNKNOWN;
     
     return run_action;
@@ -347,6 +365,11 @@ int main(int argc, char *argv[]){
         
         if(cli_requested_brightness >= 0){
             set_result |= device_set_brightness(cli_requested_brightness);
+        }
+        
+        if(cli_raw_addr >= 0 && cli_raw_value >= 0){
+            printf("Setting raw memory: address 0x%02x = 0x%02x\n", cli_raw_addr, cli_raw_value);
+            set_result |= device_set_raw(cli_raw_addr, (uint8_t)cli_raw_value);
         }
         
         if(!set_result){
