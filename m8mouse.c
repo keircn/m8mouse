@@ -783,3 +783,77 @@ int device_update_state(){
 
     return ENO_SUCCESS;
 }
+
+int device_save_profile(const char *filename){
+    if(!m8device.devconfirmed){
+        log_error("device_save_profile: device not confirmed, cannot save profile");
+        return -ENO_DEVICE;
+    }
+    
+    if(m8device.memsize <= 0){
+        log_error("device_save_profile: no memory data to save");
+        return -ENO_GENERAL;
+    }
+    
+    FILE *fp = fopen(filename, "wb");
+    if(!fp){
+        log_error("device_save_profile: failed to open file %s for writing", filename);
+        return -ENO_GENERAL;
+    }
+    
+    const char magic[] = "M8PR";
+    uint8_t version = 1;
+    uint16_t size = (uint16_t)m8device.memsize;
+    
+    fwrite(magic, 1, 4, fp);
+    fwrite(&version, 1, 1, fp);
+    fwrite(&size, sizeof(uint16_t), 1, fp);
+    fwrite(m8device.memdata, 1, m8device.memsize, fp);
+    
+    fclose(fp);
+    log_info("device_save_profile: saved %d bytes to %s", m8device.memsize, filename);
+    return ENO_SUCCESS;
+}
+
+int device_load_profile(const char *filename){
+    FILE *fp = fopen(filename, "rb");
+    if(!fp){
+        log_error("device_load_profile: failed to open file %s for reading", filename);
+        return -ENO_GENERAL;
+    }
+    
+    char magic[5] = {0};
+    uint8_t version;
+    uint16_t size;
+    
+    if(fread(magic, 1, 4, fp) != 4 || memcmp(magic, "M8PR", 4) != 0){
+        log_error("device_load_profile: invalid profile file (bad magic)");
+        fclose(fp);
+        return -ENO_GENERAL;
+    }
+    
+    if(fread(&version, 1, 1, fp) != 1 || version != 1){
+        log_error("device_load_profile: unsupported profile version %d", version);
+        fclose(fp);
+        return -ENO_GENERAL;
+    }
+    
+    if(fread(&size, sizeof(uint16_t), 1, fp) != 1 || size > M8_DEV_MEMBUFF_SIZE){
+        log_error("device_load_profile: invalid profile size");
+        fclose(fp);
+        return -ENO_GENERAL;
+    }
+    
+    if(fread(m8device.memdata, 1, size, fp) != size){
+        log_error("device_load_profile: failed to read profile data");
+        fclose(fp);
+        return -ENO_GENERAL;
+    }
+    
+    m8device.memsize = size;
+    m8device.memindex = size;
+    fclose(fp);
+    device_update_state();
+    log_info("device_load_profile: loaded %d bytes from %s", size, filename);
+    return ENO_SUCCESS;
+}

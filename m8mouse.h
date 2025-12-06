@@ -116,6 +116,9 @@ int                 device_mem_size();
 unsigned char      *device_mem_raw();
 void                device_dump_mem();
 
+int                 device_save_profile(const char *filename);
+int                 device_load_profile(const char *filename);
+
 
 
 

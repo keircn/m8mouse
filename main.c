@@ -29,6 +29,8 @@ int cli_requested_poll_rate = -1;
 int cli_requested_dpires_level = -1;
 int cli_requested_dpires_value = -1;
 int cli_dump_mem = 0;
+char *cli_save_profile = NULL;
+char *cli_load_profile = NULL;
 
 static FILE *global_logfile = NULL;
 
@@ -140,6 +142,8 @@ void print_usage(){
     "    m8mouser \n"
     "    m8mouser -l \n"
     "    m8mouser [-dpi D | -led L | -speed S | -poll P | -dpires L:R]\n"
+    "    m8mouser -save <file>    # save current config to file\n"
+    "    m8mouser -load <file>    # load config from file and apply\n"
     "    \n"
     "    Options: \n"
     "       -l        list known modes and values\n"
@@ -148,6 +152,8 @@ void print_usage(){
     "       -led      set LED mode to this index (from known modes) \n"
     "       -speed    set LED speed to this index (from known modes) \n"
     "       -poll     set polling rate (1=125Hz, 2=250Hz, 3=500Hz, 4=1000Hz)\n"
+    "       -save     save current device config to a profile file\n"
+    "       -load     load a profile file and apply to device\n"
     "       -dump     dump device memory (for debugging)\n"
     "       -g        print debug messages\n"
     "       -h        help message (this one)\n"
@@ -214,6 +220,15 @@ int process_args(int argc, char *argv[]){
                 cli_requested_poll_rate = atoi(argument) - 1;
             run_action = RUN_ACTION_SET;
             arg_index++;
+        }else if(!strcmp(option, "-save")){
+            if(strlen(argument) > 0)
+                cli_save_profile = argument;
+            arg_index++;
+        }else if(!strcmp(option, "-load")){
+            if(strlen(argument) > 0)
+                cli_load_profile = argument;
+            run_action = RUN_ACTION_SET;
+            arg_index++;
         }else{
             return RUN_ACTION_UNKNOWN;
         }
@@ -222,7 +237,7 @@ int process_args(int argc, char *argv[]){
     
     if(run_action == RUN_ACTION_SET && 
         (cli_requested_dpi == -1 && cli_requested_led == -1 && cli_requested_speed == -1 &&
-         cli_requested_poll_rate == -1 && cli_requested_dpires_level == -1))
+         cli_requested_poll_rate == -1 && cli_requested_dpires_level == -1 && cli_load_profile == NULL))
         run_action = RUN_ACTION_UNKNOWN;
     
     return run_action;
@@ -281,8 +296,28 @@ int main(int argc, char *argv[]){
         device_dump_mem();
     }
 
+    if(cli_save_profile){
+        printf("Saving profile to %s\n", cli_save_profile);
+        if(device_save_profile(cli_save_profile)){
+            printf("Error: Failed to save profile\n");
+        }else{
+            printf("Profile saved successfully\n");
+        }
+    }
+
     if(run_action == RUN_ACTION_SET){
         int set_result = 0;
+        
+        if(cli_load_profile){
+            printf("Loading profile from %s\n", cli_load_profile);
+            if(device_load_profile(cli_load_profile)){
+                printf("Error: Failed to load profile\n");
+                set_result = 1;
+            }else{
+                printf("Profile loaded, applying to device...\n");
+            }
+        }
+        
         set_result |= device_set_modes(cli_requested_dpi, cli_requested_led, cli_requested_speed);
 
         if(cli_requested_dpires_level >= 0 && cli_requested_dpires_value >= 0){
