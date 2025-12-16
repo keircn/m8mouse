@@ -240,14 +240,22 @@ int process_args(int argc, char *argv[]){
             run_action = RUN_ACTION_SET;
             arg_index++;
         }else if(!strcmp(option, "-save")){
-            if(strlen(argument) > 0)
+            if(arg_index + 1 < argc && strlen(argument) > 0) {
                 cli_save_profile = argument;
-            arg_index++;
+                arg_index++;
+            } else {
+                printf("Error: -save requires a filename argument\n");
+                return RUN_ACTION_UNKNOWN;
+            }
         }else if(!strcmp(option, "-load")){
-            if(strlen(argument) > 0)
+            if(arg_index + 1 < argc && strlen(argument) > 0) {
                 cli_load_profile = argument;
-            run_action = RUN_ACTION_SET;
-            arg_index++;
+                run_action = RUN_ACTION_SET;
+                arg_index++;
+            } else {
+                printf("Error: -load requires a filename argument\n");
+                return RUN_ACTION_UNKNOWN;
+            }
         }else if(!strcmp(option, "-raw")){
             if(strlen(argument) > 0){
                 char *colon = strchr(argument, ':');
