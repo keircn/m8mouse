@@ -4,9 +4,13 @@
 #          sudo udevadm control --reload-rules && sudo udevadm trigger
 #          (then unplug/replug mouse or reboot)
 #
-# Option 1: uaccess tag (works on modern systemd systems)
-SUBSYSTEMS=="usb", ATTR{idVendor}=="1bcf", ATTR{idProduct}=="08a0", TAG+="uaccess"
+# USB device rule with uaccess tag (works on modern systemd systems)
+SUBSYSTEM=="usb", ATTR{idVendor}=="1bcf", ATTR{idProduct}=="08a0", TAG+="uaccess"
 
-# Option 2: If uaccess doesn't work, uncomment below and add yourself to plugdev:
-#           sudo usermod -aG plugdev $USER (then log out/in)
-#SUBSYSTEMS=="usb", ATTR{idVendor}=="1bcf", ATTR{idProduct}=="08a0", MODE="0666", GROUP="plugdev"
+# hidraw rule - required for hidapi access without root
+KERNEL=="hidraw*", ATTRS{idVendor}=="1bcf", ATTRS{idProduct}=="08a0", TAG+="uaccess"
+
+# Alternative: If uaccess doesn't work, uncomment below and add yourself to plugdev:
+#              sudo usermod -aG plugdev $USER (then log out/in)
+#SUBSYSTEM=="usb", ATTR{idVendor}=="1bcf", ATTR{idProduct}=="08a0", MODE="0660", GROUP="plugdev"
+#KERNEL=="hidraw*", ATTRS{idVendor}=="1bcf", ATTRS{idProduct}=="08a0", MODE="0660", GROUP="plugdev"
