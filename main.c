@@ -261,9 +261,15 @@ int process_args(int argc, char *argv[]){
                 char *colon = strchr(argument, ':');
                 if(colon){
                     *colon = '\0';
-                    cli_raw_addr = (int)strtol(argument, NULL, 16);
-                    cli_raw_value = (int)strtol(colon + 1, NULL, 16);
+                    char *endptr_addr = NULL;
+                    char *endptr_value = NULL;
+                    cli_raw_addr = (int)strtol(argument, &endptr_addr, 16);
+                    cli_raw_value = (int)strtol(colon + 1, &endptr_value, 16);
                     *colon = ':';
+                    if (argument[0] == '\0' || *endptr_addr != '\0' || (colon + 1)[0] == '\0' || *endptr_value != '\0') {
+                        printf("Error: -raw requires valid hex ADDR:VALUE (e.g. -raw 30:05)\n");
+                        return RUN_ACTION_UNKNOWN;
+                    }
                 }else{
                     printf("Error: -raw requires ADDR:VALUE format in hex (e.g. -raw 30:05)\n");
                     return RUN_ACTION_UNKNOWN;
